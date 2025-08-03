@@ -1,0 +1,10 @@
+[project]
+name = "mood-analyzer-with-handoff"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "openai-agent>=0.1.0",
+    "rich>=14.0.0",
+]
