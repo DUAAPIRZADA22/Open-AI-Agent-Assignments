@@ -1,33 +1,65 @@
 import os
+from dotenv import load_dotenv
 from agents import Agent, Runner, AsyncOpenAI, OpenAIChatCompletionsModel
 from agents.run import RunConfig
-from dotenv import load_dotenv
-import requests
 
+# Load environment variables
 load_dotenv()
-gemini_api_key=os.getenv("GEMINI_API_KEY")
+gemini_api_key = os.getenv("GEMINI_API_KEY")
 
-client= AsyncOpenAI(
+if not gemini_api_key:
+    raise ValueError("❌ GEMINI_API_KEY is missing in your .env file.")
+
+# Gemini-compatible OpenAI client
+external_client = AsyncOpenAI(
     api_key=gemini_api_key,
-    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
 )
 
-model= OpenAIChatCompletionsModel(
-    model="gemini-1.5-flash", 
-    openai_client=client,
+# Model setup
+model = OpenAIChatCompletionsModel(
+    model="gemini-2.0-flash",
+    openai_client=external_client
 )
 
+# RunConfig
 config = RunConfig(
     model=model,
-    tracing_disabled=True
+    model_provider=external_client,
+    tracing_disabled=True,
 )
 
-Product_Suggester_Agent = Agent(
-    name="Product Suggester",
-    instructions="When a user describes a problem, suggest a product that addresses their need and explain why",
-    model=model,
+# Minimal Agent definition
+agent = Agent(
+    name="Product Suggester Agent",
+    instructions="""
+You are a helpful assistant that suggests products, remedies, or learning resources based on the user's message.
+
+Examples:
+- "I have a headache" → suggest water, oils, or medicine.
+- "I want a red dress" → suggest fashion items.
+- "I want to learn Python" → suggest courses or books.
+
+Respond as:
+Suggestions:
+- Suggestion 1 
+- Suggestion 2
+- Suggestion 3
+""",
+    model=model
 )
 
-input_value = input("Enter your Problem:")
+# One-time input and output
+async def main():
+    user_input = input("\nWhats Your Problem: ").strip()
 
-agent_result = Runner.run_sync(Product_Suggester_Agent, input=input_value)
+    try:
+        result = await Runner.run(agent, user_input, run_config=config)
+        print("\n" + result.final_output + "\n")
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+
+# Run the script
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
